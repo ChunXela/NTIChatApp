@@ -6,6 +6,8 @@ import java.net.Socket;
 
 public class Client implements Runnable{
 
+
+    //Variables 
     private Socket client;
     private BufferedReader in;
     private PrintWriter out;
@@ -14,14 +16,18 @@ public class Client implements Runnable{
     @Override
     public void run() {
         try {
+            //Connects to the server IP and PORT
+            // makes input ouput handler
             client = new Socket("188.150.82.78", 25565);
              out = new PrintWriter(client.getOutputStream(), true);
              in = new BufferedReader(new InputStreamReader(client.getInputStream()));
 
+             //runs the input handler
              InputHandler inHandler = new InputHandler();
              Thread t = new Thread(inHandler);
              t.start();
 
+             //runs at the same time as input handler
              String inMessage;
              while((inMessage = in.readLine()) != null){
                 System.out.println(inMessage);
@@ -31,7 +37,7 @@ public class Client implements Runnable{
         }
     }
 
-
+// shutdown client 
     public void shutdown(){
         done = true;
         try{
@@ -45,6 +51,7 @@ public class Client implements Runnable{
         }
     }
 
+    //handels user client input
     class InputHandler implements Runnable{
 
         @Override

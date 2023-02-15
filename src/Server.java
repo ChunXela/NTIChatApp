@@ -10,62 +10,64 @@ import java.util.concurrent.Executors;
 
 public class Server implements Runnable {
 
-
+    // variables
     private ArrayList<ConnectionHandler> connections;
-    private ServerSocket server; 
+    private ServerSocket server;
     private boolean done;
     private ExecutorService pool;
 
-    public Server(){
-        connections = new ArrayList<>(); 
+    // makes empty arraylist
+    // sets done to false
+    public Server() {
+        connections = new ArrayList<>();
         done = false;
     }
 
     @Override
-    public void run(){
+    public void run() {
         try {
             server = new ServerSocket(25565);
             pool = Executors.newCachedThreadPool();
-            while(!done){
-                Socket client = server.accept();            
+            while (!done) {
+                Socket client = server.accept();
                 ConnectionHandler handler = new ConnectionHandler(client);
                 connections.add(handler);
                 pool.execute(handler);
-        }
+            }
 
         } catch (Exception e) {
             shutdown();
         }
     }
 
-    public void broadcast(String message){
-        for(ConnectionHandler ch : connections){
+    // sends message to all connections to the server
+    public void broadcast(String message) {
+        for (ConnectionHandler ch : connections) {
             if (ch != null) {
                 ch.sendMessage(message);
             }
         }
     }
 
+    // shut down server
+    public void shutdown() {
 
+        try {
+            done = true;
+            pool.shutdown();
+            if (!server.isClosed()) {
+                server.close();
+            }
 
-    public void shutdown(){
-       
-       try {
-        done = true;
-        pool.shutdown();
-        if(!server.isClosed()){
-            server.close();
+            // end the connection for all connected clients
+            for (ConnectionHandler ch : connections) {
+                ch.shutdown();
+            }
+        } catch (Exception e) {
+            // ignore
         }
 
-        for(ConnectionHandler ch : connections){
-            ch.shutdown();
-        }
-       } catch (Exception e) {
-        // ignore
-       }
-        
     }
-
 
     class ConnectionHandler implements Runnable {
 
@@ -74,8 +76,7 @@ public class Server implements Runnable {
         private PrintWriter out;
         private String nickname;
 
-
-        public ConnectionHandler(Socket client){
+        public ConnectionHandler(Socket client) {
             this.client = client;
         }
 
@@ -83,63 +84,71 @@ public class Server implements Runnable {
         public void run() {
 
             try {
+                // makes input output handler
                 out = new PrintWriter(client.getOutputStream(), true);
                 in = new BufferedReader(new InputStreamReader(client.getInputStream()));
+                // Get nickname from the user
                 out.println("Please enter a nickname");
                 nickname = in.readLine();
                 System.out.println(nickname + " Connected");
                 broadcast(nickname + " joined the chat!");
                 String message;
 
+                // Check the message sent by the client
+                while ((message = in.readLine()) != null) {
 
-                while((message = in.readLine()) != null){
-                if(message.startsWith("/nick ")){
+                    // change nickname
+                    if (message.startsWith("/nick ")) {
 
-                    String[] messageSplit = message.split(" ", 2);
-                    if(messageSplit.length == 2) {
-                        broadcast(nickname + " renamed themselves to " + messageSplit[1]);
-                        System.out.println(nickname + " renamed themselves to " + messageSplit[1]);
-                        out.print("Successfully changed nickname to " + nickname);
+                        String[] messageSplit = message.split(" ", 2);
+                        if (messageSplit.length == 2) {
+                            broadcast(nickname + " renamed themselves to " + messageSplit[1]);
+                            System.out.println(nickname + " renamed themselves to " + messageSplit[1]);
+                            out.print("Successfully changed nickname to " + nickname);
 
+                        } else {
+                            out.println("no nickname provided");
+                        }
 
-                    } else{
-                        out.println("no nickname provided");
+                        // Client quits the chat
+                    } else if (message.startsWith("/quit")) {
+                        broadcast(nickname + " has left the chat");
+                        shutdown();
+                    }
+                    // Client sends a message to all connections
+                    else {
+                        broadcast(nickname + ": " + message);
                     }
 
-                }else if (message.startsWith("/quit")) {
-                    broadcast(nickname + " has left the chat");
-                shutdown();
-                } else{
-                    broadcast(nickname + ": " + message);
                 }
 
-                }
-
+                // cloeses the client if an error happens
             } catch (IOException e) {
                 shutdown();
             }
 
-        }    
+        }
 
-        public void sendMessage(String message){
+        // send message, being used my the broadcast method
+        public void sendMessage(String message) {
 
             out.println(message);
         }
 
-        public void shutdown(){
+        // shut down client
+        public void shutdown() {
             try {
-               in.close();
-            out.close();
-            if(!client.isClosed()){
-                client.close();
-            }  
+                in.close();
+                out.close();
+                if (!client.isClosed()) {
+                    client.close();
+                }
             } catch (Exception e) {
                 // ignore
             }
         }
 
     }
-
 
     public static void main(String[] args) {
         Server server = new Server();
