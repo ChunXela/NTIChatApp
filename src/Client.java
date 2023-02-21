@@ -4,8 +4,12 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 
-public class Client implements Runnable{
+public class Client implements Runnable {
 
+    // Variables for
+    // the socket,
+    // input output reader
+    // boolean for checking if program is supposed to shutdown
     private Socket client;
     private BufferedReader in;
     private PrintWriter out;
@@ -14,65 +18,80 @@ public class Client implements Runnable{
     @Override
     public void run() {
         try {
+            // Connects to the server IP and PORT
+            // makes input ouput handler
             client = new Socket("188.150.82.78", 25565);
-             out = new PrintWriter(client.getOutputStream(), true);
-             in = new BufferedReader(new InputStreamReader(client.getInputStream()));
+            out = new PrintWriter(client.getOutputStream(), true);
+            in = new BufferedReader(new InputStreamReader(client.getInputStream()));
 
-             InputHandler inHandler = new InputHandler();
-             Thread t = new Thread(inHandler);
-             t.start();
+            // runs the input handler in a thread
+            // allowing the inhandler to run as the same time as the code below
+            InputHandler inHandler = new InputHandler();
+            Thread t = new Thread(inHandler);
+            t.start();
 
-             String inMessage;
-             while((inMessage = in.readLine()) != null){
+            // runs at the same time as input handler
+            String inMessage;
+            while ((inMessage = in.readLine()) != null) {
                 System.out.println(inMessage);
-             }
+            }
         } catch (IOException e) {
+            // shut down the client if error is caught
             shutdown();
         }
     }
 
-
-    public void shutdown(){
+    // shutdown client
+    public void shutdown() {
         done = true;
-        try{
+        try {
+            // Closes input output reader
+            // If not closed, will not be able to connect again due to an error
             in.close();
             out.close();
-            if(!client.isClosed()){
-                client.close(); 
+            // Closes client if it is not closed
+            if (!client.isClosed()) {
+                client.close();
             }
-        }catch(IOException e){
+        } catch (IOException e) {
             // Ignore
         }
     }
 
-    class InputHandler implements Runnable{
+    // handels user client input
+    class InputHandler implements Runnable {
 
         @Override
         public void run() {
             try {
+                // Makes a inout reader from the client
                 BufferedReader inReader = new BufferedReader(new InputStreamReader(System.in));
-                while(!done){
+                while (!done) {
+                    // makes a variable for the users inputs
                     String message = inReader.readLine();
-                    if(message.equals("/quit")){
+                    // Checks the users input
+                    // If the message is /quit, then the client will close
+                    if (message.equals("/quit")) {
                         out.println(message);
                         inReader.close();
                         shutdown();
-                    }else {
+                        // If message does not match then send message to server
+                    } else {
                         out.println(message);
                     }
                 }
             } catch (IOException e) {
+                // If an error is caught, then it will shutdown the client
                 shutdown();
             }
         }
 
-
     }
 
-
     public static void main(String[] args) {
+        // run the clients run method.
         Client client = new Client();
         client.run();
     }
-    
+
 }
