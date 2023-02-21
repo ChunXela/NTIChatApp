@@ -66,6 +66,7 @@ public class Client implements Runnable {
             try {
                 // Makes a inout reader from the client
                 BufferedReader inReader = new BufferedReader(new InputStreamReader(System.in));
+                // if done is false and handels users input
                 while (!done) {
                     // makes a variable for the users inputs
                     String message = inReader.readLine();
